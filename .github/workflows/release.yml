@@ -1,0 +1,123 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Release tag (e.g. v0.1.0)"
+        required: true
+        default: "v0.1.0"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows-amd64
+            os: windows-latest
+            arch: amd64
+            archive_name: sing-share-windows-amd64.zip
+            binary: bin/sing-share.exe
+          - target: windows-arm64
+            os: windows-latest
+            arch: arm64
+            archive_name: sing-share-windows-arm64.zip
+            binary: bin/sing-share.exe
+          - target: darwin-amd64
+            os: macos-13
+            arch: amd64
+            archive_name: sing-share-darwin-amd64.tar.gz
+            binary: bin/sing-share
+          - target: darwin-arm64
+            os: macos-14
+            arch: arm64
+            archive_name: sing-share-darwin-arm64.tar.gz
+            binary: bin/sing-share
+          - target: linux-amd64
+            os: ubuntu-24.04
+            arch: amd64
+            archive_name: sing-share-linux-amd64.tar.gz
+            binary: bin/sing-share
+          - target: linux-arm64
+            os: ubuntu-24.04-arm
+            arch: arm64
+            archive_name: sing-share-linux-arm64.tar.gz
+            binary: bin/sing-share
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+          cache: true
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+      - name: Install Linux build dependencies
+        if: startsWith(matrix.target, 'linux-')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev
+      - name: Install Wails v3 CLI
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.16
+      - name: Build Application
+        run: wails3 build ARCH=${{ matrix.arch }}
+      - name: Package Archive (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          mkdir dist
+          Compress-Archive -Path ${{ matrix.binary }} -DestinationPath dist/${{ matrix.archive_name }}
+      - name: Package Archive (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p dist
+          chmod +x ${{ matrix.binary }}
+          tar -czf dist/${{ matrix.archive_name }} -C bin $(basename ${{ matrix.binary }})
+      - name: Upload Release Archive Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: dist/${{ matrix.archive_name }}
+          if-no-files-found: error
+
+  publish:
+    name: Publish Release
+    needs: [build]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all built archives
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Generate Checksums
+        working-directory: artifacts
+        run: |
+          sha256sum * > checksums.txt
+          cat checksums.txt
+      - name: Determine Release Tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "val=${{ github.event.inputs.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "val=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.val }}
+          files: artifacts/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false

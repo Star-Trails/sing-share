@@ -1,0 +1,15 @@
+{
+	"fixed": {
+		"file_version": "0.1.0"
+	},
+	"info": {
+		"0000": {
+			"ProductVersion": "0.1.0",
+			"CompanyName": "sing-share contributors",
+			"FileDescription": "Share sing-box profiles with QRS animated QR codes",
+			"LegalCopyright": "Copyright 2026 sing-share contributors",
+			"ProductName": "sing-share",
+			"Comments": "Local, offline sing-box profile transfer"
+		}
+	}
+}

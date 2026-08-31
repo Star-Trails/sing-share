@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=sing-share
+Comment=Share sing-box profiles with QRS animated QR codes
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/sing-share %u
+Terminal=false
+Type=Application
+Icon=sing-share
+Categories=Utility;
+StartupWMClass=sing-share
+
+ 
