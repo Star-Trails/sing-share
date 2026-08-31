@@ -1,0 +1,5 @@
+# Linguist overrides
+build/** linguist-vendored
+frontend/bindings/** linguist-generated
+frontend/bun.lock linguist-generated
+go.sum linguist-generated
