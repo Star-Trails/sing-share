@@ -31,7 +31,7 @@ The BPF codec tracks [`experimental/libbox/profile_import.go`](https://github.co
 
 Prerequisites:
 
-- Go 1.25 or newer
+- Go 1.27 or newer
 - Bun 1.4.0
 - platform desktop build libraries listed below
 
